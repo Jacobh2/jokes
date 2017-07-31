@@ -21,19 +21,31 @@ def export_model_to_serving(sess, export_path_base, serialized_tf_example, x, y,
 
     builder = tf.saved_model.builder.SavedModelBuilder(export_path)
 
-  # Build the signature_def_map.
+    # Build the signature_def_map.
+    """
+    # Prediction API constants.
 
-    classification_inputs = tf.saved_model.utils.build_tensor_info(serialized_tf_example)
-    classification_outputs_scores =  tf.saved_model.utils.build_tensor_info(z)
+    # Predict inputs.
+    PREDICT_INPUTS = "inputs"
 
-    classification_signature = tf.saved_model.signature_def_utils.build_signature_def(
+    # Prediction method name used in a SignatureDef.
+    PREDICT_METHOD_NAME = "tensorflow/serving/predict"
+
+    # Predict outputs.
+    PREDICT_OUTPUTS = "outputs"
+    """
+
+    prediction_inputs = tf.saved_model.utils.build_tensor_info(serialized_tf_example)
+    prediction_outputs =  tf.saved_model.utils.build_tensor_info(z)
+
+    prediction_signature = tf.saved_model.signature_def_utils.build_signature_def(
             inputs={
-                tf.saved_model.signature_constants.CLASSIFY_INPUTS: classification_inputs
+                tf.saved_model.signature_constants.PREDICT_INPUTS: prediction_inputs
                 },
             outputs={
-                tf.saved_model.signature_constants.CLASSIFY_OUTPUT_SCORES: classification_outputs_scores
+                tf.saved_model.signature_constants.PREDICT_OUTPUTS: prediction_outputs
                 },
-            method_name=tf.saved_model.signature_constants.CLASSIFY_METHOD_NAME)
+            method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME)
 
     tensor_info_x = tf.saved_model.utils.build_tensor_info(x)
     tensor_info_y = tf.saved_model.utils.build_tensor_info(y)
@@ -47,7 +59,7 @@ def export_model_to_serving(sess, export_path_base, serialized_tf_example, x, y,
     builder.add_meta_graph_and_variables(sess,
             [tf.saved_model.tag_constants.SERVING],
             signature_def_map={'add_x_and_y': add_signature,
-            tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: classification_signature},
+            tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: prediction_signature},
             legacy_init_op=legacy_init_op)
 
     builder.save()
