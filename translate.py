@@ -44,13 +44,14 @@ import tensorflow as tf
 import seq2seq_model
 import configuration
 import reader
+import seq_serving
 
-
+tf.app.flags.DEFINE_integer("version", 1, "Version of the network")
+tf.app.flags.DEFINE_string("export_dir", "/tmp/seqserving", "Export directory")
 tf.app.flags.DEFINE_string("data_dir", "/tmp", "Data directory")
 tf.app.flags.DEFINE_string("train_dir", "/tmp", "Training directory.")
 tf.app.flags.DEFINE_integer("max_train_data_size", 0, "Limit on the size of training data (0: no limit).")
 tf.app.flags.DEFINE_boolean("decode", False, "Set to True for interactive decoding.")
-tf.app.flags.DEFINE_boolean("self_test", False, "Run a self-test if this is set to True.")
 tf.app.flags.DEFINE_boolean("use_fp16", False, "Train using fp16 instead of fp32.")
 
 FLAGS = tf.app.flags.FLAGS
@@ -58,7 +59,7 @@ FLAGS = tf.app.flags.FLAGS
 # We use a number of buckets and pad to the closest one for efficiency.
 # See seq2seq_model.Seq2SeqModel for details of how they work.
 #_buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
-_buckets = [(50, 50)]
+_buckets = (50, 50)
 
 
 def read_data(source_path, target_path, max_size=None):
@@ -78,7 +79,7 @@ def read_data(source_path, target_path, max_size=None):
       into the n-th bucket, i.e., such that len(source) < _buckets[n][0] and
       len(target) < _buckets[n][1]; source and target are lists of token-ids.
   """
-  data_set = [[] for _ in _buckets]
+  data_set = [[]]
   with tf.gfile.GFile(source_path, mode="r") as source_file:
     with tf.gfile.GFile(target_path, mode="r") as target_file:
       source, target = source_file.readline(), target_file.readline()
@@ -91,10 +92,7 @@ def read_data(source_path, target_path, max_size=None):
         source_ids = [int(x) for x in source.split()]
         target_ids = [int(x) for x in target.split()]
         target_ids.append(reader.EOS_ID)
-        for bucket_id, (source_size, target_size) in enumerate(_buckets):
-          if len(source_ids) < source_size and len(target_ids) < target_size:
-            data_set[bucket_id].append([source_ids, target_ids])
-            break
+        data_set[0].append([source_ids, target_ids])
         source, target = source_file.readline(), target_file.readline()
   return data_set
 
@@ -103,18 +101,10 @@ def create_model(session, forward_only, config):
   """Create translation model and initialize or load parameters in session."""
 
   dtype = tf.float16 if FLAGS.use_fp16 else tf.float32
-  model = seq2seq_model.Seq2SeqModel(
-      config.vocab_size,
-      config.vocab_size,
-      _buckets,
-      config.size,
-      config.num_layers,
-      config.max_gradient_norm,
-      config.batch_size,
-      config.learning_rate,
-      config.learning_rate_decay_factor,
-      forward_only=forward_only,
-      dtype=dtype)
+
+  serialized_input, encoder_inputs = seq_serving.build_serving_inputs()
+
+  model = seq2seq_model.Seq2SeqModel(encoder_inputs, config, _buckets, num_samples=config.vocab_size, forward_only=forward_only, dtype=dtype)
   ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
   if ckpt and tf.train.checkpoint_exists(ckpt.model_checkpoint_path):
     print("Reading model parameters from %s" % ckpt.model_checkpoint_path)
@@ -122,7 +112,7 @@ def create_model(session, forward_only, config):
   else:
     print("Created model with fresh parameters.")
     session.run(tf.global_variables_initializer())
-  return model
+  return model, serialized_input, encoder_inputs
 
 
 def train():
@@ -139,13 +129,13 @@ def train():
   with tf.Session() as sess:
     # Create model.
     print("Creating %d layers of %d units." % (config.num_layers, config.size))
-    model = create_model(sess, False, config)
+    model, serialized_input, encoder_inputs = create_model(sess, False, config)
 
     # Read data into buckets and compute their sizes.
     print ("Reading development and training data (limit: %d)." % FLAGS.max_train_data_size)
     dev_set = read_data(from_dev, to_dev)
     train_set = read_data(from_train, to_train, FLAGS.max_train_data_size)
-    train_bucket_sizes = [len(train_set[b]) for b in range(len(_buckets))]
+    train_bucket_sizes = [len(train_set[0])]
     train_total_size = float(sum(train_bucket_sizes))
 
     # A bucket scale is a list of increasing numbers from 0 to 1 that we'll use
@@ -159,50 +149,50 @@ def train():
     current_step = 0
     previous_losses = []
     while True:
-      # Choose a bucket according to data distribution. We pick a random number
-      # in [0, 1] and use the corresponding interval in train_buckets_scale.
-      random_number_01 = np.random.random_sample()
-      bucket_id = min([i for i in range(len(train_buckets_scale))
-                       if train_buckets_scale[i] > random_number_01])
+      try:
+        # Choose a bucket according to data distribution. We pick a random number
+        # in [0, 1] and use the corresponding interval in train_buckets_scale.
+        random_number_01 = np.random.random_sample()
+        bucket_id = min([i for i in range(len(train_buckets_scale))
+                        if train_buckets_scale[i] > random_number_01])
 
-      # Get a batch and make a step.
-      start_time = time.time()
-      encoder_inputs, decoder_inputs, target_weights = model.get_batch(
-          train_set, bucket_id)
-      _, step_loss, _ = model.step(sess, encoder_inputs, decoder_inputs,
-                                   target_weights, bucket_id, False)
-      step_time += (time.time() - start_time) / config.steps_per_checkpoint
-      loss += step_loss / config.steps_per_checkpoint
-      current_step += 1
+        # Get a batch and make a step.
+        start_time = time.time()
+        encoder_inputs, decoder_inputs, target_weights = model.get_batch(
+            train_set, bucket_id)
+        _, step_loss, _ = model.step(sess, encoder_inputs, decoder_inputs,
+                                    target_weights, bucket_id, False)
+        step_time += (time.time() - start_time) / config.steps_per_checkpoint
+        loss += step_loss / config.steps_per_checkpoint
+        current_step += 1
 
-      # Once in a while, we save checkpoint, print statistics, and run evals.
-      if current_step % config.steps_per_checkpoint == 0:
-        # Print statistics for the previous epoch.
-        perplexity = math.exp(float(loss)) if loss < 300 else float("inf")
-        print ("global step %d learning rate %.4f step-time %.2f perplexity "
-               "%.2f" % (model.global_step.eval(), model.learning_rate.eval(),
-                         step_time, perplexity))
-        # Decrease learning rate if no improvement was seen over last 3 times.
-        if len(previous_losses) > 2 and loss > max(previous_losses[-3:]):
-          sess.run(model.learning_rate_decay_op)
-        previous_losses.append(loss)
-        # Save checkpoint and zero timer and loss.
-        checkpoint_path = os.path.join(FLAGS.train_dir, "translate.ckpt")
-        model.saver.save(sess, checkpoint_path, global_step=model.global_step)
-        step_time, loss = 0.0, 0.0
-        # Run evals on development set and print their perplexity.
-        for bucket_id in range(len(_buckets)):
-          if len(dev_set[bucket_id]) == 0:
-            print("  eval: empty bucket %d" % (bucket_id))
-            continue
-          encoder_inputs, decoder_inputs, target_weights = model.get_batch(
-              dev_set, bucket_id)
-          _, eval_loss, _ = model.step(sess, encoder_inputs, decoder_inputs,
-                                       target_weights, bucket_id, True)
-          eval_ppx = math.exp(float(eval_loss)) if eval_loss < 300 else float(
-              "inf")
-          print("  eval: bucket %d perplexity %.2f" % (bucket_id, eval_ppx))
-        sys.stdout.flush()
+        # Once in a while, we save checkpoint, print statistics, and run evals.
+        if current_step % config.steps_per_checkpoint == 0:
+          # Print statistics for the previous epoch.
+          perplexity = math.exp(float(loss)) if loss < 300 else float("inf")
+          print ("global step %d learning rate %.4f step-time %.2f perplexity "
+                "%.2f" % (model.global_step.eval(), model.learning_rate.eval(),
+                          step_time, perplexity))
+          # Decrease learning rate if no improvement was seen over last 3 times.
+          if len(previous_losses) > 2 and loss > max(previous_losses[-3:]):
+            sess.run(model.learning_rate_decay_op)
+          previous_losses.append(loss)
+          # Save checkpoint and zero timer and loss.
+          checkpoint_path = os.path.join(FLAGS.train_dir, "translate.ckpt")
+          model.saver.save(sess, checkpoint_path, global_step=model.global_step)
+          step_time, loss = 0.0, 0.0
+          # Run evals on development set and print their perplexity.
+          encoder_inputs, decoder_inputs, target_weights = model.get_batch(dev_set, 0)
+          _, eval_loss, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, 0, True)
+          eval_ppx = math.exp(float(eval_loss)) if eval_loss < 300 else float("inf")
+          print("  eval: bucket %d perplexity %.2f" % (0, eval_ppx))
+          sys.stdout.flush()
+        except KeyboardInterrupt:
+          # Save model
+
+          # Export to serving
+          # FIXME: How do we get hold of the correct outputs? Too tired to do this now!
+          seq_serving.export_model_to_serving(sess, FLAGS.export_dir, FLAGS.version, serialized_tf_example, serialized_input, OUTPUTS)
 
 
 def decode():
@@ -223,14 +213,7 @@ def decode():
       # Get token-ids for the input sentence.
       token_ids = reader.convert_to_id([sentence], word_to_id)[0].split(' ')
       # Which bucket does it belong to?
-      bucket_id = len(_buckets) - 1
-      for i, bucket in enumerate(_buckets):
-        if bucket[0] >= len(token_ids):
-          bucket_id = i
-          break
-      else:
-        logging.warning("Sentence truncated: %s", sentence)
-
+      bucket_id = 0
       # Get a 1-element batch to feed the sentence to the model.
       encoder_inputs, decoder_inputs, target_weights = model.get_batch(
           {bucket_id: [(token_ids, [])]}, bucket_id)
@@ -269,30 +252,9 @@ def weighted_pick(weights):
   s = np.sum(weights)
   return int(np.searchsorted(t, np.random.rand(1) * s))
 
-def self_test():
-  """Test the translation model."""
-  with tf.Session() as sess:
-    print("Self-test for neural translation model.")
-    # Create model with vocabularies of 10, 2 small buckets, 2 layers of 32.
-    model = seq2seq_model.Seq2SeqModel(10, 10, [(3, 3), (6, 6)], 32, 2,
-                                       5.0, 32, 0.3, 0.99, num_samples=8)
-    sess.run(tf.global_variables_initializer())
-
-    # Fake data set for both the (3, 3) and (6, 6) bucket.
-    data_set = ([([1, 1], [2, 2]), ([3, 3], [4]), ([5], [6])],
-                [([1, 1, 1, 1, 1], [2, 2, 2, 2, 2]), ([3, 3, 3], [5, 6])])
-    for _ in range(5):  # Train the fake model for 5 steps.
-      bucket_id = random.choice([0, 1])
-      encoder_inputs, decoder_inputs, target_weights = model.get_batch(
-          data_set, bucket_id)
-      model.step(sess, encoder_inputs, decoder_inputs, target_weights,
-                 bucket_id, False)
-
 
 def main(_):
-  if FLAGS.self_test:
-    self_test()
-  elif FLAGS.decode:
+  if FLAGS.decode:
     decode()
   else:
     train()
