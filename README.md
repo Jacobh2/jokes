@@ -2,9 +2,9 @@
 A network based on the the seq2seq tutorial by Tensorflow (https://www.tensorflow.org/tutorials/seq2seq)
 
 ## Requirements
-pandas
-nltk (punkt tokenizer)
-tensorflow >= 1.0.0
+- pandas
+- nltk (punkt tokenizer)
+- tensorflow >= 1.0.0
 
 ## Dataset
 The dataset used is in the "Question and Answer" format, meaning
@@ -26,5 +26,5 @@ using Bazel.
 It also includes a simple servings-client that can be used to call the server running the
 trained model to make yourself laugh
 
-
-
+## Docker
+I included a dockerfile to easily run the pre-processing part!
