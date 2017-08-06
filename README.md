@@ -12,6 +12,8 @@ the second part of the joke, the "punchline" is the answer part for the decoder!
 
 Will push dataset once it is correctly cleaned! :)
 
+The raw data can be found over at https://www.kaggle.com. There were two datasets used: One CSV formatted like "ID, Question, Answer", and another with just "ID, Joke". The preprocessing step will normalize the second datafile so that both have the same format.
+
 ## Bazel + Tensorflow Serving
 This repo also includes code for building the model together with Tensorflow Servings
 using Bazel.

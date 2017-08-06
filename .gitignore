@@ -1,7 +1,7 @@
 *.pyc
 __pycache__
-data
 data_to_use
-data_to_use - Copy
-jokes
 raw_data
+processed_data
+ided_data
+save

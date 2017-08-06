@@ -33,7 +33,7 @@ def load_word_to_id(file_path):
     with open(os.path.join(file_path, 'word_to_id.pkl'), 'rb') as f:
         return pickle.load(f)
 
-def read_data(file_path):
+def read_data(file_path, vocab_size=20000):
 
     with codecs.open(os.path.join(file_path, 'questions.txt'), 'r', 'utf-8') as f:
         questions = f.read().split('\n')
@@ -46,8 +46,8 @@ def read_data(file_path):
     with open(os.path.join(file_path, 'vocab.pkl'), 'rb') as f:
         vocab = pickle.load(f)
 
-    # Make vocab size of 20k
-    words = list(map(lambda t: t[0], sorted(vocab.items(), key=lambda i: i[1], reverse=True)))[:20000]
+    # Make vocab size of vocab_size
+    words = list(map(lambda t: t[0], sorted(vocab.items(), key=lambda i: i[1], reverse=True)))[:vocab_size]
 
     vocab = []
     vocab.extend(_START_VOCAB)
@@ -56,7 +56,9 @@ def read_data(file_path):
     # create word_to_id
     word_to_id = dict([(w, i) for i, w in enumerate(vocab)])
 
-    assert len(word_to_id) == 20004, "Vocab not 20k"
+    expected_size = vocab_size + len(_START_VOCAB)
+    vocab_acc_size = len(word_to_id)
+    assert vocab_acc_size == expected_size, "Expected vocab to be of size {}, {} found".format(expected_size, vocab_acc_size)
 
     q_id = convert_to_id(questions, word_to_id)
     a_id = convert_to_id(answers, word_to_id)
