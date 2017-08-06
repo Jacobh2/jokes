@@ -1,6 +1,11 @@
 # Sequence to sequence deep RNN
 A network based on the the seq2seq tutorial by Tensorflow (https://www.tensorflow.org/tutorials/seq2seq)
 
+## Requirements
+pandas
+nltk (punkt tokenizer)
+tensorflow >= 1.0.0
+
 ## Dataset
 The dataset used is in the "Question and Answer" format, meaning
 the jokes are for example:
