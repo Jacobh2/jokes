@@ -60,6 +60,29 @@ class Seq2SeqModel(object):
     output_projection = None
     softmax_loss_function = None
     # Sampled softmax only makes sense if we sample less than vocabulary size.
+    # FIXME: Implement the softmax that is needed during forward pass (running, not training)
+
+    """
+    Something like this:
+
+    if mode == "train":
+      loss = tf.nn.sampled_softmax_loss(
+          weights=weights,
+          biases=biases,
+          labels=labels,
+          inputs=inputs,
+          ...,
+          partition_strategy="div")
+    elif mode == "eval":
+      logits = tf.matmul(inputs, tf.transpose(weights))
+      logits = tf.nn.bias_add(logits, biases)
+      labels_one_hot = tf.one_hot(labels, n_classes)
+      loss = tf.nn.softmax_cross_entropy_with_logits(
+          labels=labels_one_hot,
+          logits=logits)
+
+    """
+
     if num_samples > 0 and num_samples < self.config.vocab_size:
       w_t = tf.get_variable("proj_w", [self.config.vocab_size, self.config.size], dtype=dtype)
       w = tf.transpose(w_t)
@@ -83,6 +106,14 @@ class Seq2SeqModel(object):
                 num_classes=self.config.vocab_size),
             dtype)
       softmax_loss_function = sampled_loss
+
+    """
+    FIXME: Update to use one of GRU or LSTM, maybe even
+    the new cell that you and David talked about at the start of 
+    the summer? e.g. simplify this part!
+
+    Also, simplify the "multi layered", bcs will always have num_layers > 1
+    """
 
     # Create the internal multi-layer cell for our RNN.
     def single_cell():
@@ -157,8 +188,7 @@ class Seq2SeqModel(object):
 
     self.saver = tf.train.Saver(tf.global_variables())
 
-  def step(self, session, encoder_inputs, decoder_inputs, target_weights,
-           bucket_id, forward_only):
+  def step(self, session, encoder_inputs, decoder_inputs, target_weights, forward_only):
     """Run a step of the model feeding the given inputs.
 
     Args:
@@ -166,7 +196,6 @@ class Seq2SeqModel(object):
       encoder_inputs: list of numpy int vectors to feed as encoder inputs.
       decoder_inputs: list of numpy int vectors to feed as decoder inputs.
       target_weights: list of numpy float vectors to feed as target weights.
-      bucket_id: which bucket of the model to use.
       forward_only: whether to do the backward step or only forward.
 
     Returns:
@@ -175,7 +204,15 @@ class Seq2SeqModel(object):
 
     Raises:
       ValueError: if length of encoder_inputs, decoder_inputs, or
-        target_weights disagrees with bucket size for the specified bucket_id.
+        target_weights disagrees with bucket size.
+    """
+
+    """
+    FIXME: Remove everything that has to do with buckets, which will
+    simplify the output tensor. Also, find out which output tensor
+    is best to return for the serving. Maybe even do some post-processing
+    where the ID's are converted back to words? (Also add to the model
+    where it can accept a list of tokens instead of ids)
     """
     # Check if the sizes match.
     encoder_size, decoder_size = self.bucket
@@ -203,13 +240,13 @@ class Seq2SeqModel(object):
 
     # Output feed: depends on whether we do a backward step or not.
     if not forward_only:
-      output_feed = [self.updates[bucket_id],  # Update Op that does SGD.
-                     self.gradient_norms[bucket_id],  # Gradient norm.
-                     self.losses[bucket_id]]  # Loss for this batch.
+      output_feed = [self.updates[0],  # Update Op that does SGD.
+                     self.gradient_norms[0],  # Gradient norm.
+                     self.losses[0]]  # Loss for this batch.
     else:
-      output_feed = [self.losses[bucket_id]]  # Loss for this batch.
+      output_feed = [self.losses[0]]  # Loss for this batch.
       for l in range(decoder_size):  # Output logits.
-        output_feed.append(self.outputs[bucket_id][l])
+        output_feed.append(self.outputs[0][l])
 
     outputs = session.run(output_feed, input_feed)
     if not forward_only:
@@ -217,7 +254,7 @@ class Seq2SeqModel(object):
     else:
       return None, outputs[0], outputs[1:]  # No gradient norm, loss, outputs.
 
-  def get_batch(self, data, bucket_id):
+  def get_batch(self, data):
     """Get a random batch of data from the specified bucket, prepare for step.
 
     To feed data in step(..) it must be a list of batch-major vectors, while
@@ -227,7 +264,6 @@ class Seq2SeqModel(object):
     Args:
       data: a tuple of size len(self.buckets) in which each element contains
         lists of pairs of input and output data that we use to create a batch.
-      bucket_id: integer, which bucket to get the batch for.
 
     Returns:
       The triple (encoder_inputs, decoder_inputs, target_weights) for
@@ -239,7 +275,7 @@ class Seq2SeqModel(object):
     # Get a random batch of encoder and decoder inputs from data,
     # pad them if needed, reverse encoder inputs and add GO to decoder.
     for _ in range(self.config.batch_size):
-      encoder_input, decoder_input = random.choice(data[bucket_id])
+      encoder_input, decoder_input = random.choice(data[0])
 
       # Encoder inputs are padded and then reversed.
       encoder_pad = [reader.PAD_ID] * (encoder_size - len(encoder_input))

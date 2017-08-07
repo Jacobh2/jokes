@@ -148,6 +148,12 @@ def train():
     step_time, loss = 0.0, 0.0
     current_step = 0
     previous_losses = []
+
+
+    """
+    FIXME: Make more clear how long an epok is, and log that, together with ETA
+    """
+
     while True:
       try:
         # Choose a bucket according to data distribution. We pick a random number
