@@ -108,25 +108,38 @@ def create_vocab(load_dir, save_path, dev_part):
 
 
 if __name__ == '__main__':
-    print("Creating first preprocesser")
+    # Check if all folders exist
+    if not os.path.exists('raw_data'):
+        raise ValueError("No folder raw_data found")
 
-    pr1 = Preprocesser('raw_data/jokes.csv', 'processed_data/jokes_1.csv', formatter_1, lambda q: True, answer_ok_1)
-    pr1.run()
+    if not os.path.exists('processed_data'):
+        print("Creating folder processed_data")
+        os.mkdir('processed_data')
 
-    print("Creating second preprocesser")
+    if not os.path.exists('processed_data/jokes_1.csv'):
+        print("Creating first preprocesser")
+        pr1 = Preprocesser('raw_data/jokes.csv', 'processed_data/jokes_1.csv', formatter_1, lambda q: True, answer_ok_1)
+        pr1.run()
 
-    pr2 = Preprocesser('raw_data/jokes2.csv', 'processed_data/jokes_2.csv', formatter_1, lambda q: True, answer_ok_1)
-    pr2.run()
+    if not os.path.exists('processed_data/jokes_2.csv'):
+        print("Creating second preprocesser")
+        pr2 = Preprocesser('raw_data/jokes2.csv', 'processed_data/jokes_2.csv', formatter_1, lambda q: True, answer_ok_1)
+        pr2.run()
 
-    print("Creating third preprocesser")
+    if not os.path.exists('processed_data/jokes_3.csv'):
+        print("Creating third preprocesser")
+        pr3 = Preprocesser('raw_data/shortjokes.csv', 'processed_data/jokes_3.csv', formatter_2, question_ok_2, answer_ok_2, True)
+        pr3.run()
 
-    pr3 = Preprocesser('raw_data/shortjokes.csv', 'processed_data/jokes_3.csv', formatter_2, question_ok_2, answer_ok_2, True)
-    pr3.run()
-    print("Creating vocab and tokenizing data")
+    if not os.path.exists('ided_data'):
+        print("Creating ided_data")
+        os.mkdir('ided_data')
 
-    create_vocab('processed_data', 'ided_data', 0.01)
+    if not os.path.exists('ided_data/vocab.pkl'):
+        print("Creating vocab and tokenizing data")
+        create_vocab('processed_data', 'ided_data', 0.01)
 
-    print("Creating ID verison of data")
-
-    reader.read_data('ided_data', vocab_size=25000)
+    if not os.path.exists('ided_data/word_to_id.pkl'):
+        print("Creating ID verison of data")
+        reader.read_data('ided_data', vocab_size=25000)
 
