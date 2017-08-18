@@ -107,24 +107,9 @@ class Seq2SeqModel(object):
             dtype)
       softmax_loss_function = sampled_loss
 
-    """
-    FIXME: Update to use one of GRU or LSTM, maybe even
-    the new cell that you and David talked about at the start of 
-    the summer? e.g. simplify this part!
-
-    Also, simplify the "multi layered", bcs will always have num_layers > 1
-    """
-
-    # Create the internal multi-layer cell for our RNN.
-    def single_cell():
-      return tf.contrib.rnn.GRUCell(self.config.size)
-      #return tf.contrib.rnn.GRUCell(size, reuse=tf.get_variable_scope().reuse)
-    if use_lstm:
-      def single_cell():
-        return tf.contrib.rnn.BasicLSTMCell(self.config.size)
-    cell = single_cell()
-    if self.config.num_layers > 1:
-      cell = tf.contrib.rnn.MultiRNNCell([single_cell() for _ in list(range(self.config.num_layers))])
+    assert self.config.num_layers > 1, "num_layers must be > 1"
+    cell = tf.contrib.rnn.GRUCell(self.config.size, activation=tf.nn.relu)
+    cell = tf.contrib.rnn.MultiRNNCell([cell for _ in list(range(self.config.num_layers))])
 
     # The seq2seq function: we use embedding for the input and attention.
     def seq2seq_f(encoder_inputs, decoder_inputs, do_decode):
@@ -139,52 +124,48 @@ class Seq2SeqModel(object):
           feed_previous=do_decode,
           dtype=dtype)
 
-
     # Feeds for inputs.
     #self.encoder_inputs = []
+    #for i in xrange(buckets[-1][0]):  # Last bucket is the biggest one.
+    #  self.encoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
+    #                                            name="encoder{0}".format(i)))
     self.encoder_inputs = encoder_input_list
     self.decoder_inputs = []
     self.target_weights = []
-    #for i in range(bucket[0]):  
-    #  self.encoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
-    #                                            name="encoder{0}".format(i)))
+
     for i in range(bucket[1] + 1):
-      self.decoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
-                                                name="decoder{0}".format(i)))
-      self.target_weights.append(tf.placeholder(dtype, shape=[None],
-                                                name="weight{0}".format(i)))
+      self.decoder_inputs.append(tf.placeholder(tf.int32, shape=[None], name="decoder{0}".format(i)))
+      self.target_weights.append(tf.placeholder(dtype, shape=[None], name="weight{0}".format(i)))
 
     # Our targets are decoder inputs shifted by one.
-    targets = [self.decoder_inputs[i + 1]
-               for i in range(len(self.decoder_inputs) - 1)]
+    targets = [self.decoder_inputs[i + 1] for i in range(len(self.decoder_inputs) - 1)]
 
     # Training outputs and losses.
     if forward_only:
-      self.outputs, self.losses = tf.contrib.legacy_seq2seq.model_with_buckets(
+      outputs_buckets, losses_bucket = tf.contrib.legacy_seq2seq.model_with_buckets(
           self.encoder_inputs, self.decoder_inputs, targets,
           self.target_weights, [bucket], lambda x, y: seq2seq_f(x, y, True),
           softmax_loss_function=softmax_loss_function)
       # If we use output projection, we need to project outputs for decoding.
       if output_projection is not None:
-        self.outputs[0] = [tf.matmul(output, output_projection[0]) + output_projection[1] for output in self.outputs[0]]
+        outputs_buckets[0] = [tf.matmul(output, output_projection[0]) + output_projection[1] for output in outputs_buckets[0]]
     else:
-      self.outputs, self.losses = tf.contrib.legacy_seq2seq.model_with_buckets(
+      outputs_buckets, losses_bucket = tf.contrib.legacy_seq2seq.model_with_buckets(
           self.encoder_inputs, self.decoder_inputs, targets,
           self.target_weights, [bucket],
           lambda x, y: seq2seq_f(x, y, False),
           softmax_loss_function=softmax_loss_function)
 
+    self.outputs = outputs_buckets[0]
+    self.losses = losses_bucket[0]
+
     # Gradients and SGD update operation for training the model.
     params = tf.trainable_variables()
     if not forward_only:
-      self.gradient_norms = []
-      self.updates = []
       opt = tf.train.GradientDescentOptimizer(self.learning_rate)
-      gradients = tf.gradients(self.losses[0], params)
-      clipped_gradients, norm = tf.clip_by_global_norm(gradients, self.config.max_gradient_norm)
-      self.gradient_norms.append(norm)
-      self.updates.append(opt.apply_gradients(
-          zip(clipped_gradients, params), global_step=self.global_step))
+      gradients = tf.gradients(self.losses, params)
+      clipped_gradients, self.gradient_norms = tf.clip_by_global_norm(gradients, self.config.max_gradient_norm)
+      self.updates = opt.apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
 
     self.saver = tf.train.Saver(tf.global_variables())
 
@@ -240,13 +221,13 @@ class Seq2SeqModel(object):
 
     # Output feed: depends on whether we do a backward step or not.
     if not forward_only:
-      output_feed = [self.updates[0],  # Update Op that does SGD.
-                     self.gradient_norms[0],  # Gradient norm.
-                     self.losses[0]]  # Loss for this batch.
+      output_feed = [self.updates,  # Update Op that does SGD.
+                     self.gradient_norms,  # Gradient norm.
+                     self.losses]  # Loss for this batch.
     else:
-      output_feed = [self.losses[0]]  # Loss for this batch.
+      output_feed = [self.losses]  # Loss for this batch.
       for l in range(decoder_size):  # Output logits.
-        output_feed.append(self.outputs[0][l])
+        output_feed.append(self.outputs[l])
 
     outputs = session.run(output_feed, input_feed)
     if not forward_only:

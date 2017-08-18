@@ -3,26 +3,43 @@ import os
 import tensorflow as tf
 
 
-def build_serving_inputs(bucket):
-      serialized_input = tf.placeholder(tf.string, name='serialized_input')
-      feature_configs = dict()
-      names = []
-      
-      for i in range(bucket[0]):  
+def build_serving_inputs(num_steps, verbose=False):
+
+    if verbose:
+        print("About to create inputs using num_steps:", num_steps)  
+
+    serialized_input = tf.placeholder(tf.string, name='serialized_input')
+    feature_configs = dict()
+    names = []
+
+    if verbose:
+        print("About to create feature dict")
+    # Create the feature config dict
+    # which includes the <insert thing here>
+    for i in range(num_steps):  
         name = "encoder{0}".format(i)
         names.append(name)
-        shape = [None]
+        shape = []
         dtype = tf.int64
+        #feature_configs[name] = tf.FixedLenFeature(shape=shape, dtype=dtype)
+        #FixedLenSequenceFeature.
         feature_configs[name] = tf.FixedLenFeature(shape=shape, dtype=dtype)
-        
-      parsed_example = tf.parse_example(serialized_input, feature_configs)
-
-      encoder_inputs = []
-      for name in names:
-        # use tf.identity() to assign name
+    
+    if verbose:
+        print("Feature dict creates")
+    
+    parsed_example = tf.parse_example(serialized_input, feature_configs)
+    
+    if verbose:
+        print("About to assign name to inputs")
+    # use tf.identity() to assign name
+    encoder_inputs = []
+    for name in names:
         encoder_inputs.append(tf.identity(parsed_example[name], name=name))
 
-      return serialized_input, encoder_inputs
+    if verbose:
+        print("Returning inputs")
+    return serialized_input, encoder_inputs
 
 
 def export_model_to_serving(sess, export_path_base, version, serialized_tf_example, inputs, outputs):
