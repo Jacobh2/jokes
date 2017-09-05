@@ -40,6 +40,7 @@ import logging
 
 import numpy as np
 import tensorflow as tf
+import math
 
 import seq2seq_model
 import configuration
@@ -48,8 +49,8 @@ import seq_serving
 
 tf.app.flags.DEFINE_integer("version", 1, "Version of the network")
 tf.app.flags.DEFINE_string("export_dir", "/tmp/seqserving", "Export directory")
-tf.app.flags.DEFINE_string("data_dir", "/ided_data", "Data directory")
-tf.app.flags.DEFINE_string("train_dir", "/save", "Training directory.")
+tf.app.flags.DEFINE_string("data_dir", "./data_small", "Data directory")
+tf.app.flags.DEFINE_string("train_dir", "./save", "Training directory.")
 tf.app.flags.DEFINE_integer("max_train_data_size", 0, "Limit on the size of training data (0: no limit).")
 tf.app.flags.DEFINE_boolean("decode", False, "Set to True for interactive decoding.")
 tf.app.flags.DEFINE_boolean("use_fp16", False, "Train using fp16 instead of fp32.")
@@ -59,7 +60,7 @@ FLAGS = tf.app.flags.FLAGS
 # We use a number of buckets and pad to the closest one for efficiency.
 # See seq2seq_model.Seq2SeqModel for details of how they work.
 #_buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
-_buckets = (50, 50)
+_buckets = (10, 10)
 
 
 def read_data(source_path, target_path, max_size=None):
@@ -103,7 +104,7 @@ def create_model(session, forward_only, config):
 
   dtype = tf.float16 if FLAGS.use_fp16 else tf.float32
 
-  serialized_input, encoder_inputs = seq_serving.build_serving_inputs(_buckets, verbose=True)
+  serialized_input, encoder_inputs = seq_serving.build_serving_inputs(_buckets[0], verbose=True)
 
   print("Serving inputs created")
 
@@ -139,14 +140,10 @@ def train():
     print ("Reading development and training data (limit: %d)." % FLAGS.max_train_data_size)
     dev_set = read_data(from_dev, to_dev)
     train_set = read_data(from_train, to_train, FLAGS.max_train_data_size)
-    train_bucket_sizes = [len(train_set)]
-    train_total_size = float(sum(train_bucket_sizes))
+    train_sizes = len(train_set)
+    train_steps = math.ceil(train_sizes/config.batch_size)
 
-    # A bucket scale is a list of increasing numbers from 0 to 1 that we'll use
-    # to select a bucket. Length of [scale[i], scale[i+1]] is proportional to
-    # the size if i-th training bucket, as used later.
-    train_buckets_scale = [sum(train_bucket_sizes[:i + 1]) / train_total_size
-                           for i in range(len(train_bucket_sizes))]
+    print("Data:", train_set)
 
     # This is the training loop.
     step_time, loss = 0.0, 0.0
@@ -155,18 +152,24 @@ def train():
 
     total_time = 0
 
-    for step in range(train_total_size):
+    print("Data read, starting to train for", train_steps, "steps")
+    epochs = 10
+
+    for step in range(train_steps):
       start_time = time.time()
       try:
-        # Choose a bucket according to data distribution. We pick a random number
-        # in [0, 1] and use the corresponding interval in train_buckets_scale.
-        random_number_01 = np.random.random_sample()
-
         # Get a batch and make a step.
         start_time = time.time()
-        encoder_inputs, decoder_inputs, target_weights = model.get_batch(train_set)
+        encoder_inputs, decoder_inputs, target_weights = model.get_batch(train_set, step)
+
+        print("Encoder inputs:", encoder_inputs)
+        print("Decoder inputs:", decoder_inputs)
+
         _, step_loss, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, False)
+        
         step_time += (time.time() - start_time) / config.steps_per_checkpoint
+        print("Step time:", step_time)
+
         loss += step_loss / config.steps_per_checkpoint
         current_step += 1
 
@@ -176,11 +179,11 @@ def train():
           perplexity = math.exp(float(loss)) if loss < 300 else float("inf")
 
           # Calculate total time left
-          eta = (total_time/(step if step > 0 else 1))*train_total_size
+          eta = (total_time/(step if step > 0 else 1))*train_sizes
           eta_min = eta/60
 
           print ("[%s] global step %d learning rate %.4f step-time %.2f perplexity "
-                "%.2f ETA: %s min" % (round(step/train_total_size, 2), model.global_step.eval(), model.learning_rate.eval(),
+                "%.2f ETA: %s min" % (round(step/train_sizes, 2), model.global_step.eval(), model.learning_rate.eval(),
                           step_time, perplexity, eta_min))
           
           # Decrease learning rate if no improvement was seen over last 3 times.
@@ -192,7 +195,7 @@ def train():
           model.saver.save(sess, checkpoint_path, global_step=model.global_step)
           step_time, loss = 0.0, 0.0
           # Run evals on development set and print their perplexity.
-          encoder_inputs, decoder_inputs, target_weights = model.get_batch(dev_set)
+          encoder_inputs, decoder_inputs, target_weights = model.get_batch(dev_set, step)
           #session, encoder_inputs, decoder_inputs, target_weights, forward_only):
           _, eval_loss, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, True)
           eval_ppx = math.exp(float(eval_loss)) if eval_loss < 300 else float("inf")
