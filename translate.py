@@ -45,7 +45,7 @@ import configuration
 
 tf.app.flags.DEFINE_integer("version", 1, "Version of the network")
 tf.app.flags.DEFINE_string("export_dir", "/tmp/seqserving", "Export directory")
-tf.app.flags.DEFINE_string("data_dir", "./data_small", "Data directory")
+tf.app.flags.DEFINE_string("data_dir", "./ided_data", "Data directory")
 tf.app.flags.DEFINE_string("train_dir", "./save", "Training directory.")
 tf.app.flags.DEFINE_integer("max_train_data_size", 0, "Limit on the size of training data (0: no limit).")
 tf.app.flags.DEFINE_boolean("decode", False, "Set to True for interactive decoding.")

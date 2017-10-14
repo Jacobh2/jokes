@@ -21,6 +21,8 @@ The raw data can be found over at https://www.kaggle.com. There were two dataset
 - https://www.kaggle.com/jiriroz/qa-jokes (called jokes.csv in the code)
 - https://www.kaggle.com/abhinavmoudgil95/short-jokes (called shortjokes.csv in the code)
 
+The raw data is put into a `raw_data` folder
+
 ## Bazel + Tensorflow Serving
 This repo also includes code for building the model together with Tensorflow Servings
 using Bazel.
