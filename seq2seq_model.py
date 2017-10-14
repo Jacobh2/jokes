@@ -225,8 +225,8 @@ class Seq2SeqModel(object):
         average_across_batch=True)
     """
 
-    loss = tf.contrib.legacy_seq2seq.sequence_loss_by_example(
-      outputs, 
+    self.loss = tf.contrib.legacy_seq2seq.sequence_loss_by_example(
+      outputs, targets, target_weights, softmax_loss_function=softmax_loss_function
     )
 
     self.outputs = outputs_buckets[0]

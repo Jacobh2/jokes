@@ -121,10 +121,10 @@ if __name__ == '__main__':
         pr1 = Preprocesser('raw_data/jokes.csv', 'processed_data/jokes_1.csv', formatter_1, lambda q: True, answer_ok_1)
         pr1.run()
 
-    if not os.path.exists('processed_data/jokes_2.csv'):
-        print("Creating second preprocesser")
-        pr2 = Preprocesser('raw_data/jokes2.csv', 'processed_data/jokes_2.csv', formatter_1, lambda q: True, answer_ok_1)
-        pr2.run()
+    # if not os.path.exists('processed_data/jokes_2.csv'):
+    #     print("Creating second preprocesser")
+    #     pr2 = Preprocesser('raw_data/jokes2.csv', 'processed_data/jokes_2.csv', formatter_1, lambda q: True, answer_ok_1)
+    #     pr2.run()
 
     if not os.path.exists('processed_data/jokes_3.csv'):
         print("Creating third preprocesser")

@@ -5,3 +5,5 @@ raw_data
 processed_data
 ided_data
 save
+.DS_Store
+seq2seq

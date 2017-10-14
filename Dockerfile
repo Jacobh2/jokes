@@ -10,6 +10,4 @@ RUN pip install --upgrade --quiet -r requirements.txt
 
 RUN python -m nltk.downloader punkt
 
-COPY . .
-
 CMD ["python", "-m", "preprocessing.process"]
