@@ -29,7 +29,7 @@ def main():
         return render_template('index.html')
     else:
         ans = generate_answer(question.lower())
-        return render_template('index.html', answer=ans)
+        return render_template('index.html', answer=ans, question=question)
 
 
 if __name__ == '__main__':

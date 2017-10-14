@@ -4,13 +4,14 @@
 
 <form action="/", method="POST">
   Ask your question:<br>
-  <input type="text" name="question" value="Why did the chicken cross the road?">
+  <input size="250" type="text" name="question">
   <br>
   <input type="submit" value="Submit">
 </form> 
 
 <p>
-  <h1>{{answer}}</h1>
+  <h3>Q: {{question}}</h3>
+  <h3>A: {{answer}}</h3>
 </p>
 
 </body>
