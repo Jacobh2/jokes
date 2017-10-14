@@ -103,7 +103,6 @@ def create_model(session, forward_only, config):
   dtype = tf.float16 if FLAGS.use_fp16 else tf.float32
   model = seq2seq_model.Seq2SeqModel(
       config.vocab_size,
-      config.vocab_size,
       _buckets,
       config.size,
       config.num_layers,
@@ -156,58 +155,71 @@ def train():
     step_time, loss = 0.0, 0.0
     current_step = 0
     previous_losses = []
-    while True:
-      # Choose a bucket according to data distribution. We pick a random number
-      # in [0, 1] and use the corresponding interval in train_buckets_scale.
-      random_number_01 = np.random.random_sample()
-      bucket_id = min([i for i in range(len(train_buckets_scale))
-                       if train_buckets_scale[i] > random_number_01])
 
-      # Get a batch and make a step.
-      start_time = time.time()
-      encoder_inputs, decoder_inputs, target_weights = model.get_batch(
-          train_set, bucket_id)
-      _, step_loss, _ = model.step(sess, encoder_inputs, decoder_inputs,
-                                   target_weights, bucket_id, False)
-      step_time += (time.time() - start_time) / FLAGS.steps_per_checkpoint
-      loss += step_loss / FLAGS.steps_per_checkpoint
-      current_step += 1
+    max_epochs = config.epochs
+    total_train_steps = math.ceil(train_total_size/config.batch_size)
+    checkpoint_path = os.path.join(FLAGS.train_dir, "translate.ckpt")
 
-      # Once in a while, we save checkpoint, print statistics, and run evals.
-      if current_step % FLAGS.steps_per_checkpoint == 0:
-        # Print statistics for the previous epoch.
-        perplexity = math.exp(float(loss)) if loss < 300 else float("inf")
-        print ("global step %d learning rate %.4f step-time %.2f perplexity "
-               "%.2f" % (model.global_step.eval(), model.learning_rate.eval(),
-                         step_time, perplexity))
-        # Decrease learning rate if no improvement was seen over last 3 times.
-        if len(previous_losses) > 2 and loss > max(previous_losses[-3:]):
-          sess.run(model.learning_rate_decay_op)
-        previous_losses.append(loss)
-        # Save checkpoint and zero timer and loss.
-        checkpoint_path = os.path.join(FLAGS.train_dir, "translate.ckpt")
-        model.saver.save(sess, checkpoint_path, global_step=model.global_step)
-        step_time, loss = 0.0, 0.0
-        # Run evals on development set and print their perplexity.
-        for bucket_id in range(len(_buckets)):
-          if len(dev_set[bucket_id]) == 0:
-            print("  eval: empty bucket %d" % (bucket_id))
-            continue
-          encoder_inputs, decoder_inputs, target_weights = model.get_batch(
-              dev_set, bucket_id)
-          _, eval_loss, _ = model.step(sess, encoder_inputs, decoder_inputs,
-                                       target_weights, bucket_id, True)
-          eval_ppx = math.exp(float(eval_loss)) if eval_loss < 300 else float(
-              "inf")
-          print("  eval: bucket %d perplexity %.2f" % (bucket_id, eval_ppx))
-        sys.stdout.flush()
+    print("Train total size:", train_total_size)
+    print("train_buckets_scale", train_buckets_scale)
+    for epoch in range(max_epochs):
+      for train_step in range(total_train_steps):
+        # Choose a bucket according to data distribution. We pick a random number
+        # in [0, 1] and use the corresponding interval in train_buckets_scale.
+        random_number_01 = np.random.random_sample()
+        bucket_id = min([i for i in range(len(train_buckets_scale))
+                        if train_buckets_scale[i] > random_number_01])
+
+        # Get a batch and make a step.
+        start_time = time.time()
+        encoder_inputs, decoder_inputs, target_weights = model.get_batch(
+            train_set, bucket_id)
+        _, step_loss, _ = model.step(sess, encoder_inputs, decoder_inputs,
+                                    target_weights, bucket_id, False)
+        step_time += (time.time() - start_time) / FLAGS.steps_per_checkpoint
+        loss += step_loss / FLAGS.steps_per_checkpoint
+        current_step += 1
+
+        # Once in a while, we save checkpoint, print statistics, and run evals.
+        if current_step % FLAGS.steps_per_checkpoint == 0:
+          # Print statistics for the previous epoch.
+          perplexity = math.exp(float(loss)) if loss < 300 else float("inf")
+          print ("global step %d learning rate %.4f step-time %.2f perplexity "
+                "%.2f" % (model.global_step.eval(), model.learning_rate.eval(),
+                          step_time, perplexity))
+          # Decrease learning rate if no improvement was seen over last 3 times.
+          if len(previous_losses) > 2 and loss > max(previous_losses[-3:]):
+            sess.run(model.learning_rate_decay_op)
+          previous_losses.append(loss)
+          # Save checkpoint and zero timer and loss.
+          model.saver.save(sess, checkpoint_path, global_step=model.global_step)
+          step_time, loss = 0.0, 0.0
+          # Run evals on development set and print their perplexity.
+          for bucket_id in range(len(_buckets)):
+            if len(dev_set[bucket_id]) == 0:
+              print("  eval: empty bucket %d" % (bucket_id))
+              continue
+            encoder_inputs, decoder_inputs, target_weights = model.get_batch(
+                dev_set, bucket_id)
+            _, eval_loss, _ = model.step(sess, encoder_inputs, decoder_inputs,
+                                        target_weights, bucket_id, True)
+            eval_ppx = math.exp(float(eval_loss)) if eval_loss < 300 else float(
+                "inf")
+            print("  eval: bucket %d perplexity %.2f" % (bucket_id, eval_ppx))
+          sys.stdout.flush()
+      # End of epoch, save checkpoint
+      print("Epoch", epoch+1, "done, saving checkpoint")
+      model.saver.save(sess, checkpoint_path, global_step=model.global_step)
+    print("Training done! Saving checkpint")
+    model.saver.save(sess, checkpoint_path, global_step=model.global_step)
+
 
 
 def decode():
   config = configuration.Config()
   with tf.Session() as sess:
     # Create model and load parameters.
-    model = create_model(sess, True)
+    model = create_model(sess, True, config)
     model.batch_size = 1  # We decode one sentence at a time.
 
     # Load vocabularies.
@@ -216,7 +228,7 @@ def decode():
 
     # Decode from standard input.
     sentence = input("> ").lower()
-    while sentence:
+    while sentence != 'q':
       # Get token-ids for the input sentence.
       token_ids = reader.convert_to_id([sentence], word_to_id)[0].split(' ')
       # Which bucket does it belong to?
@@ -260,7 +272,7 @@ def decode():
       if reader.EOS_ID in outputs:
         outputs = outputs[:outputs.index(reader.EOS_ID)]
       # Print out French sentence corresponding to outputs.
-      print(" ".join([tf.compat.as_str(rev_fr_vocab[output]) for output in outputs]))
+      print(" ".join([tf.compat.as_str(id_to_word[output]) for output in outputs]))
       sentence = input("> ").lower()
 
 

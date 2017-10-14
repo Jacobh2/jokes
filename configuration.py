@@ -7,3 +7,4 @@ class Config(object):
     num_layers = 2
     vocab_size = 25004
     steps_per_checkpoint = 2000
+    epochs = 10
