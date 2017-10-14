@@ -41,7 +41,6 @@ install:
 git clone https://github.com/google/seq2seq.git
 cd seq2seq
 
-# Install package and dependencies
 pip3 install -e .
 
 Test:
