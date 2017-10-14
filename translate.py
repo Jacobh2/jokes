@@ -194,6 +194,7 @@ def train():
                           step_time, perplexity, loss))
           # Decrease learning rate if no improvement was seen over last 3 times.
           if len(previous_losses) > 2 and loss > max(previous_losses[-3:]):
+            print("Decreasing learning rate!")
             sess.run(model.learning_rate_decay_op)
           previous_losses.append(loss)
           # Save checkpoint and zero timer and loss.
