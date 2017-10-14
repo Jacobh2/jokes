@@ -40,6 +40,7 @@ import tensorflow as tf
 import reader
 import seq2seq_model
 import configuration
+import utils
 
 
 
@@ -159,11 +160,13 @@ def train():
     max_epochs = config.epochs
     total_train_steps = math.ceil(train_total_size/config.batch_size)
     checkpoint_path = os.path.join(FLAGS.train_dir, "translate.ckpt")
+    total_time = 0
 
     print("Train total size:", train_total_size)
     print("train_buckets_scale", train_buckets_scale)
     for epoch in range(max_epochs):
       for train_step in range(total_train_steps):
+        start_time = time.time()
         # Choose a bucket according to data distribution. We pick a random number
         # in [0, 1] and use the corresponding interval in train_buckets_scale.
         random_number_01 = np.random.random_sample()
@@ -184,8 +187,10 @@ def train():
         if current_step % FLAGS.steps_per_checkpoint == 0:
           # Print statistics for the previous epoch.
           perplexity = math.exp(float(loss)) if loss < 300 else float("inf")
-          print ("global step %d learning rate %.4f step-time %.2f perplexity "
-                "%.2f loss %.2f" % (model.global_step.eval(), model.learning_rate.eval(),
+          done = (train_step/train_total_size)*100
+          eta = utils.format_time(total_time, train_step, train_total_size * max_epochs)
+          print ("[%.2f] ETA %s global step %d learning rate %.4f step-time %.2f perplexity "
+                "%.2f loss %.2f" % (done, eta, model.global_step.eval(), model.learning_rate.eval(),
                           step_time, perplexity, loss))
           # Decrease learning rate if no improvement was seen over last 3 times.
           if len(previous_losses) > 2 and loss > max(previous_losses[-3:]):
@@ -207,6 +212,7 @@ def train():
                 "inf")
             print("  eval: bucket %d perplexity %.2f" % (bucket_id, eval_ppx))
           sys.stdout.flush()
+          total_time += time.time() - start_time
       # End of epoch, save checkpoint
       print("Epoch", epoch+1, "done, saving checkpoint")
       model.saver.save(sess, checkpoint_path, global_step=model.global_step)
