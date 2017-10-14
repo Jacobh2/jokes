@@ -236,51 +236,59 @@ def decode():
     # Decode from standard input.
     sentence = input("> ").lower()
     while sentence != 'q':
-      # Get token-ids for the input sentence.
-      token_ids = reader.convert_to_id([sentence], word_to_id)[0].split(' ')
-      # Which bucket does it belong to?
-      bucket_id = len(_buckets) - 1
-      for i, bucket in enumerate(_buckets):
-        if bucket[0] >= len(token_ids):
-          bucket_id = i
-          break
-      else:
-        logging.warning("Sentence truncated: %s", sentence)
-
-      # Get a 1-element batch to feed the sentence to the model.
-      encoder_inputs, decoder_inputs, target_weights = model.get_batch(
-          {bucket_id: [(token_ids, [])]}, bucket_id)
-      # Get output logits for the sentence.
-      _, _, output_logits = model.step(sess, encoder_inputs, decoder_inputs,
-                                       target_weights, bucket_id, True)
-      # This is a greedy decoder - outputs are just argmaxes of output_logits.
-      outputs = [int(np.argmax(logit, axis=1)) for logit in output_logits]
-
-
-      # Custom decoder, weighted pick
-      """
-      outputs = []
-      for logit in output_logits:
-        pick = weighted_pick(logit[0])
-        max_itt = 0
-        while pick in reader.START_VOCAB_ID:
-          if max_itt > 5:
-            print("Max try")
-            break
-          pick = weighted_pick(logit[0])
-          max_itt += 1
-        print("Pick:", pick, type(pick))
-        outputs.append(pick)
-      #outputs = [int(weighted_pick(logit[0:,1])) for logit in output_logits]
-      """
-      
-
-      # If there is an EOS symbol in outputs, cut them at that point.
-      if reader.EOS_ID in outputs:
-        outputs = outputs[:outputs.index(reader.EOS_ID)]
-      # Print out French sentence corresponding to outputs.
-      print(" ".join([tf.compat.as_str(id_to_word[output]) for output in outputs]))
+      ans = answer(sess, model, sentence, word_to_id, id_to_word)
+      print(ans)
       sentence = input("> ").lower()
+
+
+def answer(sess, model, question, word_to_id, id_to_word):
+  # Get token-ids for the input sentence.
+  token_ids = reader.convert_to_id([question], word_to_id)[0].split(' ')
+  # Which bucket does it belong to?
+  bucket_id = len(_buckets) - 1
+  for i, bucket in enumerate(_buckets):
+    if bucket[0] >= len(token_ids):
+      bucket_id = i
+      break
+  else:
+    logging.warning("question truncated: %s", question)
+
+  # Get a 1-element batch to feed the question to the model.
+  encoder_inputs, decoder_inputs, target_weights = model.get_batch(
+      {bucket_id: [(token_ids, [])]}, bucket_id)
+  # Get output logits for the question.
+  _, _, output_logits = model.step(sess, encoder_inputs, decoder_inputs,
+                                    target_weights, bucket_id, True)
+  # This is a greedy decoder - outputs are just argmaxes of output_logits.
+
+  print("output_logits:", type(output_logits), len(output_logits))
+  outputs = [int(np.argmax(logit, axis=1)) for logit in output_logits]
+
+
+  # Custom decoder, weighted pick
+  """
+  outputs = []
+  for logit in output_logits:
+    pick = weighted_pick(logit[0])
+    max_itt = 0
+    while pick in reader.START_VOCAB_ID:
+      if max_itt > 5:
+        print("Max try")
+        break
+      pick = weighted_pick(logit[0])
+      max_itt += 1
+    print("Pick:", pick, type(pick))
+    outputs.append(pick)
+  #outputs = [int(weighted_pick(logit[0:,1])) for logit in output_logits]
+  """
+  
+
+  # If there is an EOS symbol in outputs, cut them at that point.
+  if reader.EOS_ID in outputs:
+    outputs = outputs[:outputs.index(reader.EOS_ID)]
+  # Print out French sentence corresponding to outputs.
+  answer = " ".join([tf.compat.as_str(id_to_word[output]) for output in outputs])
+  return answer
 
 
 def self_test():
