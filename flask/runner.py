@@ -294,7 +294,6 @@ class Seq2SeqModel(object):
       batch_weights.append(batch_weight)
     return batch_encoder_inputs, batch_decoder_inputs, batch_weights
 
-
 def create_model(session):
   """Create translation model and initialize or load parameters in session."""
   config = Config()
