@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:1.3.0-py3
+FROM elswork/rpi-tensorflow:1.3.0V1
 
 MAINTAINER Jacob Hagstedt <jacob.hagstedt@gmail.com>
 
@@ -13,4 +13,4 @@ COPY . .
 EXPOSE 8080
 
 # Command to run when starting the service
-CMD [ "uwsgi", "--ini", "uwsgi.ini"]⏎
+CMD [ "uwsgi", "--ini", "uwsgi.ini"]
