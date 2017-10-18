@@ -7,6 +7,7 @@ import numpy as np
 import tensorflow as tf
 
 import reader
+import string
 
 _buckets = [(50, 50)]
 
@@ -374,5 +375,6 @@ def answer(sess, model, question, word_to_id, id_to_word):
   if reader.EOS_ID in outputs:
     outputs = outputs[:outputs.index(reader.EOS_ID)]
   # Print out French sentence corresponding to outputs.
-  answer = " ".join([tf.compat.as_str(id_to_word[output]) for output in outputs])
-  return answer
+  answer_tokens = [tf.compat.as_str(id_to_word[output]) for output in outputs]
+  answer = ''.join([' '+i if not i.startswith("'") and i not in string.punctuation else i for i in answer_tokens]).strip()
+  return answer[0].upper() + answer[1:]
