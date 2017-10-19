@@ -46,7 +46,16 @@
 <section class="w3-container w3-center w3-content" style="max-width:800px;padding:50px 0px 0px;">
     <h2 class="w3-wide">{{question}}</h2>
     <h2 class="w3-wide">{{answer}}</h2>
+
+    {% if qa_id is defined %}
+        <form action="/vote", method="POST">
+            <input value="{{qa_id}}" name="qa_id" type="hidden">
+            <button style="font-size:24px" type="submit" name="up">Me like!<i class="fa fa-thumbs-up"></i></button>
+            <button style="font-size:24px" type="submit" name="down">Meh<i class="fa fa-thumbs-down"></i></button>
+        </form> 
+    {% endif %}
 </section>
+
 
 <!-- Footer -->
 <footer class="w3-container w3-padding-64 w3-center w3-black w3-xlarge" id="footer">

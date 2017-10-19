@@ -332,7 +332,8 @@ def load():
 
 def answer(sess, model, question, word_to_id, id_to_word):
   # Get token-ids for the input sentence.
-  token_ids = reader.convert_to_id([question], word_to_id)[0].split(' ')
+  token_ids = reader.convert_to_id(question, word_to_id)
+
   # Which bucket does it belong to?
   bucket_id = len(_buckets) - 1
   for i, bucket in enumerate(_buckets):
@@ -369,7 +370,6 @@ def answer(sess, model, question, word_to_id, id_to_word):
     outputs.append(pick)
   #outputs = [int(weighted_pick(logit[0:,1])) for logit in output_logits]
   """
-  
 
   # If there is an EOS symbol in outputs, cut them at that point.
   if reader.EOS_ID in outputs:

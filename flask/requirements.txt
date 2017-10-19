@@ -1,2 +1,4 @@
 Flask
 uwsgi
+nltk
+flask_sqlalchemy
