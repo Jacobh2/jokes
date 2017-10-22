@@ -2,3 +2,5 @@ Flask
 uwsgi
 nltk
 flask_sqlalchemy
+BeautifulSoup4
+requests

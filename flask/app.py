@@ -1,9 +1,10 @@
 import numpy as np
 import tensorflow as tf
-from flask import Flask, jsonify, render_template, request, redirect
+from flask import Flask, jsonify, render_template, request, redirect, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 
 import runner
+import image_utils
 from reader import load_word_to_id
 
 
@@ -14,7 +15,7 @@ def generate_answer(input):
     return runner.answer(session, model, input, word_to_id, id_to_word)
 
 # webapp
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='public')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/qa.db'
 db = SQLAlchemy(app)
 
@@ -116,6 +117,24 @@ def main():
 
         # Redirect to the specific URL so that the user can share the result bcs fun!
         return redirect('/{}'.format(qa_id), code=302)
+
+
+@app.route('/<int:qa_id>/render', methods=['GET'])
+def create_image(qa_id):
+    # Load from the db
+    qa = QA.query.get(int(qa_id))
+
+    if qa is None:
+        return redirect('/', code=302)
+
+    print("create image")
+    file_path = image_utils.create_image(qa.question, qa.answer)
+
+    print("Got", file_path, "back")
+    if file_path is None:
+        return "File path is none"
+
+    return send_from_directory('public', file_path)
 
 
 if __name__ == '__main__':
