@@ -8,6 +8,9 @@ COPY requirements.txt requirements.txt
 
 RUN pip install --upgrade --quiet -r requirements.txt
 
+# Install punkt tokenizer
+RUN python -m nltk.downloader punkt
+
 COPY . .
 
 EXPOSE 8080

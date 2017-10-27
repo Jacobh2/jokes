@@ -3,6 +3,8 @@ import os
 import codecs
 import re
 
+from nltk.tokenize import word_tokenize
+
 
 _DIGIT_RE = re.compile(r"\d+")
 
@@ -22,15 +24,11 @@ START_VOCAB_ID = [PAD_ID, GO_ID, EOS_ID]
 
 _WORD_SPLIT = re.compile("([\s.,!?\"':;)(])")
 
-def convert_to_id(list_of_sentences, word_to_id):
-    list_of_ids = []
-    for sentence in list_of_sentences:
-        tokens = []
-        for word in sentence.split():
-            tokens.extend(list(filter(None, _WORD_SPLIT.split(word))))
-        ids = [word_to_id.get(_DIGIT_RE.sub("0", token), UNK_ID) for token in tokens]
-        list_of_ids.append(' '.join(list(map(str, ids))))
-    return list_of_ids
+def convert_to_id(sentence, word_to_id):
+    # Tokenize
+    tokens = word_tokenize(sentence, language='english')
+    # Convert to ID
+    return [word_to_id.get(_DIGIT_RE.sub("0", token), UNK_ID) for token in tokens]
 
 
 def load_word_to_id(file_path):
