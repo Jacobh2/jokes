@@ -15,5 +15,7 @@ COPY . .
 
 EXPOSE 8080
 
+RUN alias python=python3
+
 # Command to run when starting the service
 CMD [ "uwsgi", "--ini", "uwsgi.ini"]
