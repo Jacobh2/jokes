@@ -134,7 +134,7 @@ def create_image(qa_id):
     if file_path is None:
         return "File path is none"
 
-    return send_from_directory('public', file_path)
+    return send_from_directory('/public', file_path)
 
 
 if __name__ == '__main__':
