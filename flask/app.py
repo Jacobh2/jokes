@@ -138,7 +138,7 @@ def create_image(qa_id):
 
 
 @app.route('/<int:qa_id>/share', methods=['GET'])
-def create_image(qa_id):
+def share_image(qa_id):
     # Load from the db
     qa = QA.query.get(int(qa_id))
 
