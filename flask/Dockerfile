@@ -6,16 +6,16 @@ WORKDIR /usr/app/src
 
 COPY requirements.txt requirements.txt
 
-RUN pip install --upgrade --quiet -r requirements.txt
+RUN python3 -m pip install --upgrade --quiet -r requirements.txt
 
 # Install punkt tokenizer
-RUN python -m nltk.downloader punkt
+RUN python3 -m nltk.downloader punkt
 
 COPY . .
 
 EXPOSE 8080
 
-RUN alias python=python3
+RUN echo "alias python=python3" > ~/.bash_aliases
 
 # Command to run when starting the service
 CMD [ "uwsgi", "--ini", "uwsgi.ini"]
