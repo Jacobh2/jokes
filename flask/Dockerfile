@@ -6,7 +6,9 @@ WORKDIR /usr/app/src
 
 COPY requirements.txt requirements.txt
 
-RUN python3 -m pip install --upgrade --quiet -r requirements.txt
+RUN apt-get update && apt-get install python3-pip
+
+RUN pip3 install --upgrade --quiet -r requirements.txt
 
 # Install punkt tokenizer
 RUN python3 -m nltk.downloader punkt
