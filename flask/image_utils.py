@@ -83,11 +83,13 @@ def generate_html(question, answer):
     if q_image is None or a_image is None:
         return None
 
-    return HTML.format(q_image, a_image)
-    
+    return q_image, a_image
 
 def create_image(question, answer):
-    html = generate_html(question, answer)
+    data = generate_html(question, answer)
+    if data is None:
+        return None
+    html = HTML.format(data[0], data[1])
     return render_image(html)
 
 

@@ -55,8 +55,17 @@
             <button style="font-size:24px" type="submit" name="up">Me like!<i class="fa fa-thumbs-up"></i></button>
             <button style="font-size:24px" type="submit" name="down">Meh<i class="fa fa-thumbs-down"></i></button>
         </form> 
+        <form action="/{{qa_id}}/share", method="GET">
+            <button style="font-size:24px" type="submit" name="gen_image">Generate image<i class="fa fa-share-alt"></i></button>
+        </form> 
+    {% endif %}
+    {% if q_image is defined %}
+        {{q_image}}
+        <br>
+        {{a_image}}
     {% endif %}
 </section>
+
 
 
 <!-- Footer -->

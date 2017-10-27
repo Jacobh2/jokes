@@ -146,12 +146,12 @@ def share_image(qa_id):
         return redirect('/', code=302)
 
     print("create image")
-    html = image_utils.generate_html(qa.question, qa.answer)
+    data = image_utils.generate_html(qa.question, qa.answer)
 
-    if html is None:
+    if data is None:
         return "Error generating image"
 
-    return html
+    return render_template('index.html', answer=qa.answer, question=qa.question, qa_id=qa_id, q_image=data[0], a_image=data[1])
 
 
 if __name__ == '__main__':
