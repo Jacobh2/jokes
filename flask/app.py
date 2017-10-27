@@ -15,7 +15,7 @@ def generate_answer(input):
     return runner.answer(session, model, input, word_to_id, id_to_word)
 
 # webapp
-app = Flask(__name__, static_url_path='public')
+app = Flask(__name__, static_url_path='/public')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/qa.db'
 db = SQLAlchemy(app)
 
