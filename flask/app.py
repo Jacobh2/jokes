@@ -137,5 +137,22 @@ def create_image(qa_id):
     return send_from_directory('/public', file_path)
 
 
+@app.route('/<int:qa_id>/share', methods=['GET'])
+def create_image(qa_id):
+    # Load from the db
+    qa = QA.query.get(int(qa_id))
+
+    if qa is None:
+        return redirect('/', code=302)
+
+    print("create image")
+    html = image_utils.generate_html(qa.question, qa.answer)
+
+    if html is None:
+        return "Error generating image"
+
+    return html
+
+
 if __name__ == '__main__':
     app.run()

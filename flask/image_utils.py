@@ -74,9 +74,8 @@ def render_image(html):
     except Exception as e:
         print("error:", e)
     return file_name
-    
 
-def create_image(question, answer):
+def generate_html(question, answer):
     global HTML
     q_image = download_images(question.lower())
     a_image = download_images(answer.lower())
@@ -84,8 +83,11 @@ def create_image(question, answer):
     if q_image is None or a_image is None:
         return None
 
-    html = HTML.format(q_image, a_image)
+    return HTML.format(q_image, a_image)
+    
 
+def create_image(question, answer):
+    html = generate_html(question, answer)
     return render_image(html)
 
 

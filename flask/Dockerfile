@@ -12,13 +12,13 @@ RUN pip install --upgrade --quiet -r requirements.txt
 RUN python -m nltk.downloader punkt
 
 # COPY phantomjs-2.1.1-linux-x86_64.tar.bz2 phantomjs-2.1.1-linux-x86_64.tar.bz2
-RUN apt-get update && apt-get install wget
+# RUN apt-get update && apt-get install wget
 
-RUN wget https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-2.1.1-linux-x86_64.tar.bz2
+# RUN wget https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-2.1.1-linux-x86_64.tar.bz2
 
-RUN tar -xvf phantomjs-2.1.1-linux-x86_64.tar.bz2 && mv /usr/app/src/phantomjs-2.1.1-linux-x86_64/bin/phantomjs /usr/app/src/phantomjs && rm -r /usr/app/src/phantomjs-2.1.1-linux-x86_64
+# RUN tar -xvf phantomjs-2.1.1-linux-x86_64.tar.bz2 && mv /usr/app/src/phantomjs-2.1.1-linux-x86_64/bin/phantomjs /usr/app/src/phantomjs && rm -r /usr/app/src/phantomjs-2.1.1-linux-x86_64
 
-RUN apt-get update && apt-get install -y libfontconfig
+# RUN apt-get update && apt-get install -y libfontconfig
 
 COPY . .
 
