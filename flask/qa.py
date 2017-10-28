@@ -10,4 +10,7 @@ def load_latest_qustions(clazz):
         return None
 
     # Format the list according to the template
-    return [(qa.question, qa.answer, qa.vote) for qa in qas]
+    def format(qa):
+        return qa.id, qa.created.strftime("%Y-%m-%d %H:%M"), qa.question, qa.answer, qa.vote
+
+    return list(map(format, qas))

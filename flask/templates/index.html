@@ -151,15 +151,25 @@
     <div id="table-scroll">
         <table>
             <tr>
+            <th>Asked</th>
             <th>Question</th>
             <th>Answer</th>
+            <th>Score</th>
             <th>Vote</th>
             </tr>
-            {% for q, a, v in qas -%}
+            {% for i, c, q, a, v in qas -%}
                 <tr>
+                    <td>{{c}}</td>
                     <td>{{q}}</td>
                     <td>{{a}}</td>
                     <td>{{v}}</td>
+                    <td>
+                        <form action="/vote", method="POST">
+                            <input value="{{i}}" name="qa_id" type="hidden">
+                            <button id="btn" type="submit" name="up"><i class="fa fa-thumbs-up"></i></button>
+                            <button id="btn" type="submit" name="down"><i class="fa fa-thumbs-down"></i></button>
+                        </form> 
+                    </td>
                 </tr>
             {%- endfor %}
         </table>

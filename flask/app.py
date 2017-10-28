@@ -73,9 +73,9 @@ def vote():
         # Id of the result
         qa_id = request.form.get('qa_id', None)
         # The maybe updated question
-        question = request.form.get('question').strip().lower()
+        question = request.form.get('question', None)
         # The maybe updated answer
-        answer = request.form.get('answer').strip().lower()
+        answer = request.form.get('answer', None)
 
         # sanity if we have an id
         if qa_id is None:
@@ -83,22 +83,33 @@ def vote():
 
         # Load object using the id
         qa = QA.query.get(int(qa_id))
-        # Check if the question or answer has changed,
-        # if so, it's directly an upvote
-        q_diff = qa.question != question
-        a_diff = qa.answer != answer
 
-        # Set the question and answer
-        qa.question = question
-        qa.answer = answer
-        
-        # Set the vote and change flag
-        if q_diff or a_diff:
-            qa.vote += 1
-            qa.changed = 1
-        else:
+        # Check if we have the question and answer data,
+        # this since we can also just vote without
+        # having the ability to change a question!
+        if question is None or answer is None:
+            # Only vote
             qa.vote += 1 if is_up else -1
-            qa.changed = 0
+        else:
+            question = question.strip().lower()
+            answer = answer.strip().lower()
+
+            # Check if the question or answer has changed,
+            # if so, it's directly an upvote
+            q_diff = qa.question != question
+            a_diff = qa.answer != answer
+
+            # Set the question and answer
+            qa.question = question
+            qa.answer = answer
+            
+            # Set the vote and change flag
+            if q_diff or a_diff:
+                qa.vote += 1
+                qa.changed = 1
+            else:
+                qa.vote += 1 if is_up else -1
+                qa.changed = 0
 
         # Commit changes to db
         db.session.commit()
