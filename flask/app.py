@@ -151,19 +151,23 @@ def create_image(qa_id):
 
 @app.route('/<int:qa_id>/share', methods=['GET'])
 def share_image(qa_id):
-    # Load from the db
-    qa = QA.query.get(int(qa_id))
+    try:
+        # Load from the db
+        qa = QA.query.get(int(qa_id))
 
-    if qa is None:
-        return redirect('/', code=302)
+        if qa is None:
+            return redirect('/', code=302)
 
-    print("create image")
-    data = image_utils.generate_html(qa.question, qa.answer)
+        print("create image")
+        data = image_utils.generate_html(qa.question, qa.answer)
 
-    if data is None:
-        return "Error generating image"
+        if data is None:
+            return "Error generating image"
 
-    return render_template('index.html', answer=qa.answer, question=qa.question, qa_id=qa_id, q_image=data[0], a_image=data[1])
+        return render_template('index.html', answer=qa.answer, question=qa.question, qa_id=qa_id, q_image=data[0], a_image=data[1])
+    except Exception as e:
+        print("Error while rendering image:", e)
+        return render_template('index.html', answer=qa.answer, question=qa.question, qa_id=qa_id, error='Hm, something went wrong rendering the image :(')
 
 
 if __name__ == '__main__':
