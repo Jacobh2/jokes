@@ -55,9 +55,9 @@
             font-size: 18px;
             padding: 5px 10px 5px 10px;
             text-decoration: none;
-          }
+        }
           
-          #btn:hover {
+        #btn:hover {
             background: #3cb0fd;
             background-image: -webkit-linear-gradient(top, #3cb0fd, #3498db);
             background-image: -moz-linear-gradient(top, #3cb0fd, #3498db);
@@ -65,10 +65,33 @@
             background-image: -o-linear-gradient(top, #3cb0fd, #3498db);
             background-image: linear-gradient(to bottom, #3cb0fd, #3498db);
             text-decoration: none;
-          }
-          #mybody{
+        }
+        #mybody{
             overflow:auto;
-          }
+        }
+        #table-wrapper {
+            position:relative;
+        }
+        #table-scroll {
+            height:350px;
+            overflow:auto;  
+            margin-top:20px;
+        }
+        #table-wrapper table {
+            width:450px;
+        }
+        #table-wrapper table * {
+            background:#c7c7c7;
+            color:black;
+        }
+        #table-wrapper table thead th .text {
+            position:absolute;   
+            top:-20px;
+            z-index:2;
+            height:20px;
+            width:35%;
+            border:1px solid red;
+        }
     </style>
 
 </head>
@@ -122,6 +145,27 @@
         {{error}}
     {% endif %}
 </section>
+
+{% if qas is defined %}
+<div id="table-wrapper">
+    <div id="table-scroll">
+        <table>
+            <tr>
+            <th>Question</th>
+            <th>Answer</th>
+            <th>Vote</th>
+            </tr>
+            {% for q, a, v in qas -%}
+                <tr>
+                    <td>{{q}}</td>
+                    <td>{{a}}</td>
+                    <td>{{v}}</td>
+                </tr>
+            {%- endfor %}
+        </table>
+    </div>
+</div>
+{% endif %}
 
 
 
