@@ -10,7 +10,7 @@ RUN wget https://github.com/samjabrahams/tensorflow-on-raspberry-pi/releases/dow
 RUN pip3 install tensorflow-1.1.0-cp34-cp34m-linux_armv7l.whl
 
 # Finally, we need to reinstall the mock library to keep it from throwing an error when we import TensorFlow:
-RUN pip3 uninstall mock
+# RUN pip3 uninstall mock
 
 RUN pip3 install mock
 
