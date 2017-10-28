@@ -73,12 +73,12 @@
             position:relative;
         }
         #table-scroll {
-            height:350px;
+            height:450px;
             overflow:auto;  
             margin-top:20px;
         }
         #table-wrapper table {
-            width:450px;
+            width:700px;
         }
         #table-wrapper table * {
             background:#c7c7c7;
@@ -159,11 +159,11 @@
             </tr>
             {% for i, c, q, a, v in qas -%}
                 <tr>
-                    <td>{{c}}</td>
-                    <td>{{q}}</td>
-                    <td>{{a}}</td>
-                    <td>{{v}}</td>
-                    <td>
+                    <td width="21%">{{c}}</td>
+                    <td width="30%">{{q}}</td>
+                    <td width="30%">{{a}}</td>
+                    <td width="6%">{{v}}</td>
+                    <td width="13%">
                         <form action="/vote", method="POST">
                             <input value="{{i}}" name="qa_id" type="hidden">
                             <button id="btn" type="submit" name="up"><i class="fa fa-thumbs-up"></i></button>
