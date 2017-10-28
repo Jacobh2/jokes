@@ -107,7 +107,7 @@
         </form> 
         <br>
         <form action="/{{qa_id}}/share", method="GET">
-            <button id="btn" type="submit" name="gen_image"><i class="fa fa-share-alt"></i> Generate image</button>
+            <button id="btn" title="Will generate a handwritten image using a RNN network! Please see http://www.cs.toronto.edu/~graves/handwriting.cgi" type="submit" name="gen_image"><i class="fa fa-share-alt"></i> Generate image</button>
         </form> 
     {% endif %}
     {% if q_image is defined %}
