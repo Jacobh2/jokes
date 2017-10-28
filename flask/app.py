@@ -36,6 +36,18 @@ class QA(db.Model):
 # Make sure the db is created
 db.create_all()
 
+@app.route('/contact', methods=['GET'])
+def contact():
+    return render_template('contact.html')
+
+@app.route('/nothome', methods=['GET'])
+def nothome():
+    return render_template('nothome.html', title='Not home')
+
+@app.route('/alsonothome', methods=['GET'])
+def alsonothome():
+    return render_template('nothome.html', title='Also not home')
+
 @app.route('/vote', methods=['POST'])
 def vote():
     try:

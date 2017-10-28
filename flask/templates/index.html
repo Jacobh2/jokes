@@ -7,7 +7,16 @@
 
 <head>
     <style>
-        #footer {
+        .dark-primary-color    { background: #0288D1; }
+        .default-primary-color { background: #03A9F4; }
+        .light-primary-color   { background: #B3E5FC; }
+        .text-primary-color    { color: #FFFFFF; }
+        .accent-color          { background: #FFEB3B; }
+        .primary-text-color    { color: #212121; }
+        .secondary-text-color  { color: #757575; }
+        .divider-color         { border-color: #BDBDBD; }
+
+        .footer {
             position:fixed;
             bottom:0;
             width:100%;
@@ -16,11 +25,11 @@
         textarea {
             resize: none;
         }
-        #section1 {
+        .w3-content {
             max-width:30%;
         }
         #section2 {
-            max-width:30%;padding:2% 0% 0%;
+            padding:2% 0% 0%;
         }
         #result {
             width: 100%;
@@ -63,8 +72,8 @@
 <!-- Navigation -->
 <nav class="w3-bar w3-black">
     <a href="/" class="w3-button w3-bar-item">Home</a>
-    <a href="#nothome" class="w3-button w3-bar-item">Not Home</a>
-    <a href="#alsonothome" class="w3-button w3-bar-item">Also Not Home</a>
+    <a href="/nothome" class="w3-button w3-bar-item">Not Home</a>
+    <a href="/alsonothome" class="w3-button w3-bar-item">Also Not Home</a>
     <a href="/contact" class="w3-button w3-bar-item">Contact</a>
 </nav>
 
@@ -90,12 +99,12 @@
             <input stype="text" id="result" name="answer" value="{{answer}}">
             <input value="{{qa_id}}" name="qa_id" type="hidden">
             <br>
-            <button id="btn" type="submit" name="up">Yey<i class="fa fa-thumbs-up"></i></button>
-            <button id="btn" type="submit" name="down">Meh<i class="fa fa-thumbs-down"></i></button>
+            <button id="btn" type="submit" name="up"><i class="fa fa-thumbs-up"></i> Yey</button>
+            <button id="btn" type="submit" name="down"><i class="fa fa-thumbs-down"></i> Meh</button>
         </form> 
         <br>
         <form action="/{{qa_id}}/share", method="GET">
-            <button id="btn" type="submit" name="gen_image">Generate image<i class="fa fa-share-alt"></i></button>
+            <button id="btn" type="submit" name="gen_image"><i class="fa fa-share-alt"></i> Generate image</button>
         </form> 
     {% endif %}
     {% if q_image is defined %}
@@ -108,7 +117,7 @@
 
 
 <!-- Footer -->
-<footer class="w3-container w3-padding-64 w3-center w3-black w3-xlarge" id="footer">
+<footer class="w3-container w3-padding-64 w3-center w3-black w3-xlarge footer" id="footer">
     <a href="https://github.com/Jacobh2" target="_blank"><i class="fa fa-github"></i></a>
     <a href="https://www.linkedin.com/in/jacob-hagstedt-persson-suorra-a3658799" target="_blank"><i class="fa fa-linkedin"></i></a>
 </footer>
