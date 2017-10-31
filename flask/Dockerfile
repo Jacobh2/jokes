@@ -1,12 +1,10 @@
-FROM elswork/rpi-tensorflow:1.3.0V1
+FROM tensorflow-py34
 
 MAINTAINER Jacob Hagstedt <jacob.hagstedt@gmail.com>
 
 WORKDIR /usr/app/src
 
 COPY requirements.txt requirements.txt
-
-RUN apt-get update && apt-get install -y python3-pip
 
 RUN pip3 install --upgrade --quiet -r requirements.txt
 

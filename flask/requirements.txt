@@ -4,4 +4,3 @@ nltk
 flask_sqlalchemy
 BeautifulSoup4
 requests
-numpy
